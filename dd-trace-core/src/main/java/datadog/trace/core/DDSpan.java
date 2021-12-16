@@ -141,7 +141,7 @@ public class DDSpan implements AgentSpan, CoreSpan<DDSpan> {
     long adjustedStartTimeNano;
     if (!externalClock) {
       // remove tick precision part of our internal time to better match external clock
-      adjustedStartTimeNano = MILLISECONDS.toNanos(NANOSECONDS.toMillis(startTimeNano));
+      adjustedStartTimeNano = MILLISECONDS.toNanos(NANOSECONDS.toMillis(startTimeNano + 500_000));
     } else {
       adjustedStartTimeNano = startTimeNano;
     }
