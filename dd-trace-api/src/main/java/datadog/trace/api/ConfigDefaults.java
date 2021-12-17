@@ -51,8 +51,7 @@ public final class ConfigDefaults {
   static final boolean DEFAULT_JMX_FETCH_ENABLED = true;
   static final boolean DEFAULT_TRACE_AGENT_V05_ENABLED = false;
 
-  static final int DEFAULT_CLOCK_SYNC_PERIOD = 30_000; // milliseconds
-  static final int DEFAULT_CLOCK_DRIFT_LIMIT = 1; // milliseconds
+  static final int DEFAULT_CLOCK_SYNC_PERIOD = 30; // seconds
 
   static final int DEFAULT_DOGSTATSD_START_DELAY = 15; // seconds
 

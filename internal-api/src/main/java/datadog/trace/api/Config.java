@@ -7,7 +7,6 @@ import static datadog.trace.api.ConfigDefaults.DEFAULT_ANALYTICS_SAMPLE_RATE;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_APPSEC_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_AWS_PROPAGATION_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_CIVISIBILITY_ENABLED;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_CLOCK_DRIFT_LIMIT;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_CLOCK_SYNC_PERIOD;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_CWS_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_CWS_TLS_REFRESH;
@@ -199,7 +198,6 @@ import static datadog.trace.api.config.TracerConfig.AGENT_NAMED_PIPE;
 import static datadog.trace.api.config.TracerConfig.AGENT_PORT_LEGACY;
 import static datadog.trace.api.config.TracerConfig.AGENT_TIMEOUT;
 import static datadog.trace.api.config.TracerConfig.AGENT_UNIX_DOMAIN_SOCKET;
-import static datadog.trace.api.config.TracerConfig.CLOCK_DRIFT_LIMIT;
 import static datadog.trace.api.config.TracerConfig.CLOCK_SYNC_PERIOD;
 import static datadog.trace.api.config.TracerConfig.ENABLE_TRACE_AGENT_V05;
 import static datadog.trace.api.config.TracerConfig.HEADER_TAGS;
@@ -354,7 +352,6 @@ public class Config {
   private final Set<PropagationStyle> propagationStylesToExtract;
   private final Set<PropagationStyle> propagationStylesToInject;
   private final int clockSyncPeriod;
-  private final int clockDriftLimit;
 
   private final boolean jmxFetchEnabled;
   private final int dogStatsDStartDelay;
@@ -718,7 +715,6 @@ public class Config {
             PROPAGATION_STYLE_INJECT, DEFAULT_PROPAGATION_STYLE_INJECT);
 
     clockSyncPeriod = configProvider.getInteger(CLOCK_SYNC_PERIOD, DEFAULT_CLOCK_SYNC_PERIOD);
-    clockDriftLimit = configProvider.getInteger(CLOCK_DRIFT_LIMIT, DEFAULT_CLOCK_DRIFT_LIMIT);
 
     dogStatsDStartDelay =
         configProvider.getInteger(
@@ -1180,10 +1176,6 @@ public class Config {
 
   public int getClockSyncPeriod() {
     return clockSyncPeriod;
-  }
-
-  public int getClockDriftLimit() {
-    return clockDriftLimit;
   }
 
   public int getDogStatsDStartDelay() {
@@ -2212,8 +2204,6 @@ public class Config {
         + propagationStylesToInject
         + ", clockSyncPeriod="
         + clockSyncPeriod
-        + ", clockDriftLimit="
-        + clockDriftLimit
         + ", jmxFetchEnabled="
         + jmxFetchEnabled
         + ", dogStatsDStartDelay="
