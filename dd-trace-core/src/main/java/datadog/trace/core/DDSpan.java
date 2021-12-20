@@ -106,7 +106,7 @@ public class DDSpan implements AgentSpan, CoreSpan<DDSpan> {
     } else {
       startTimeNano = MICROSECONDS.toNanos(timestampMicro);
       externalClock = true;
-      context.getTrace().touch(); // Update lastReferenced
+      context.getTrace().touch(); // external clock: explicitly update lastReferenced
     }
   }
 
@@ -149,8 +149,8 @@ public class DDSpan implements AgentSpan, CoreSpan<DDSpan> {
       durationNano += MICROSECONDS.toNanos(externalOffsetMicros);
     } else {
       durationNano = MICROSECONDS.toNanos(stopTimeMicros) - startTimeNano;
+      context.getTrace().touch(); // external clock: explicitly update lastReferenced
     }
-    context.getTrace().touch(); // Update timestamp
     finishAndAddToTrace(durationNano);
   }
 
