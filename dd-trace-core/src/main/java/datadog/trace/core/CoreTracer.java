@@ -398,7 +398,7 @@ public class CoreTracer implements AgentTracer.TracerAPI {
 
     this.startTimeNano = Clock.currentNanoTime();
     this.startNanoTicks = Clock.currentNanoTicks();
-    this.clockSyncPeriod = SECONDS.toNanos(config.getClockSyncPeriod());
+    this.clockSyncPeriod = Math.max(1_000_000L, SECONDS.toNanos(config.getClockSyncPeriod()));
     this.lastSyncTicks = startNanoTicks;
 
     this.checkpointer = SamplingCheckpointer.create();
@@ -561,7 +561,7 @@ public class CoreTracer implements AgentTracer.TracerAPI {
    */
   long getTimeWithNanoTicks(long nanoTicks) {
     long computedNanoTime = startTimeNano + Math.max(0, nanoTicks - startNanoTicks);
-    if (nanoTicks - lastSyncTicks > clockSyncPeriod) {
+    if (nanoTicks - lastSyncTicks >= clockSyncPeriod) {
       lastSyncTicks = nanoTicks;
       long drift = computedNanoTime - Clock.currentNanoTime();
       if (Math.abs(drift + counterDrift) >= 1_000_000L) { // allow up to 1ms of drift
