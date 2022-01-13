@@ -32,6 +32,8 @@ public class AppSecEventWrapper {
 
   @Override
   public int hashCode() {
+    // NOTE this hashCode calculation is incorrect if hashCode is called before
+    // and after calls to toString()
     return Objects.hash(triggers, json);
   }
 
