@@ -6,7 +6,7 @@ import static datadog.trace.api.ConfigDefaults.DEFAULT_AGENT_WRITER_TYPE;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_ANALYTICS_SAMPLE_RATE;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_APPSEC_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_APPSEC_REPORTING_INBAND;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_AWS_PROPAGATION_ENABLED;
+import static datadog.trace.api.ConfigDefaults.DEFAULT_APPSEC_TRACE_RATE_LIMIT;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_CIVISIBILITY_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_CWS_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_CWS_TLS_REFRESH;
@@ -21,33 +21,17 @@ import static datadog.trace.api.ConfigDefaults.DEFAULT_HTTP_SERVER_ERROR_STATUSE
 import static datadog.trace.api.ConfigDefaults.DEFAULT_HTTP_SERVER_ROUTE_BASED_NAMING;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_HTTP_SERVER_TAG_QUERY_STRING;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_INTEGRATIONS_ENABLED;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_JMS_PROPAGATION_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_JMX_FETCH_ENABLED;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_KAFKA_CLIENT_PROPAGATION_ENABLED;
+import static datadog.trace.api.ConfigDefaults.DEFAULT_JMX_FETCH_MULTIPLE_RUNTIME_SERVICES_ENABLED;
+import static datadog.trace.api.ConfigDefaults.DEFAULT_JMX_FETCH_MULTIPLE_RUNTIME_SERVICES_LIMIT;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_LOGS_INJECTION_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_PARTIAL_FLUSH_MIN_SPANS;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_PERF_METRICS_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_PRIORITY_SAMPLING_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_PRIORITY_SAMPLING_FORCE;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_AGENTLESS;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_ALLOCATION_ENABLED;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_ENABLED;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_EXCEPTION_HISTOGRAM_MAX_COLLECTION_SIZE;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_EXCEPTION_HISTOGRAM_TOP_ITEMS;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_EXCEPTION_SAMPLE_LIMIT;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_HEAP_ENABLED;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_LEGACY_TRACING_INTEGRATION;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_PROXY_PORT;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_START_DELAY;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_START_FORCE_FIRST;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_UPLOAD_COMPRESSION;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_UPLOAD_PERIOD;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_UPLOAD_SUMMARY_ON_413;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_PROFILING_UPLOAD_TIMEOUT;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_PROPAGATION_EXTRACT_LOG_HEADER_NAMES_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_PROPAGATION_STYLE_EXTRACT;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_PROPAGATION_STYLE_INJECT;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_RABBIT_PROPAGATION_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_RUNTIME_CONTEXT_FIELD_INJECTION;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_SCOPE_DEPTH_LIMIT;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_SCOPE_ITERATION_KEEP_ALIVE;
@@ -55,7 +39,6 @@ import static datadog.trace.api.ConfigDefaults.DEFAULT_SERIALVERSIONUID_FIELD_IN
 import static datadog.trace.api.ConfigDefaults.DEFAULT_SERVICE_NAME;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_SERVLET_ROOT_CONTEXT_SERVICE_NAME;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_SITE;
-import static datadog.trace.api.ConfigDefaults.DEFAULT_SQS_PROPAGATION_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_TRACE_AGENT_PORT;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_TRACE_AGENT_V05_ENABLED;
 import static datadog.trace.api.ConfigDefaults.DEFAULT_TRACE_ANALYTICS_ENABLED;
@@ -76,18 +59,20 @@ import static datadog.trace.api.DDTags.SERVICE_TAG;
 import static datadog.trace.api.IdGenerationStrategy.RANDOM;
 import static datadog.trace.api.Platform.isJavaVersionAtLeast;
 import static datadog.trace.api.config.AppSecConfig.APPSEC_ENABLED;
+import static datadog.trace.api.config.AppSecConfig.APPSEC_IP_ADDR_HEADER;
 import static datadog.trace.api.config.AppSecConfig.APPSEC_REPORTING_INBAND;
 import static datadog.trace.api.config.AppSecConfig.APPSEC_REPORT_TIMEOUT_SEC;
 import static datadog.trace.api.config.AppSecConfig.APPSEC_RULES_FILE;
+import static datadog.trace.api.config.AppSecConfig.APPSEC_TRACE_RATE_LIMIT;
 import static datadog.trace.api.config.CiVisibilityConfig.CIVISIBILITY_ENABLED;
 import static datadog.trace.api.config.CwsConfig.CWS_ENABLED;
 import static datadog.trace.api.config.CwsConfig.CWS_TLS_REFRESH;
 import static datadog.trace.api.config.GeneralConfig.API_KEY;
 import static datadog.trace.api.config.GeneralConfig.API_KEY_FILE;
 import static datadog.trace.api.config.GeneralConfig.AZURE_APP_SERVICES;
-import static datadog.trace.api.config.GeneralConfig.CONFIGURATION_FILE;
 import static datadog.trace.api.config.GeneralConfig.DOGSTATSD_ARGS;
 import static datadog.trace.api.config.GeneralConfig.DOGSTATSD_HOST;
+import static datadog.trace.api.config.GeneralConfig.DOGSTATSD_NAMED_PIPE;
 import static datadog.trace.api.config.GeneralConfig.DOGSTATSD_PATH;
 import static datadog.trace.api.config.GeneralConfig.DOGSTATSD_PORT;
 import static datadog.trace.api.config.GeneralConfig.DOGSTATSD_START_DELAY;
@@ -115,39 +100,57 @@ import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_CONFIG_DIR;
 import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_ENABLED;
 import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_INITIAL_REFRESH_BEANS_PERIOD;
 import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_METRICS_CONFIGS;
+import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_MULTIPLE_RUNTIME_SERVICES_ENABLED;
+import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_MULTIPLE_RUNTIME_SERVICES_LIMIT;
 import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_REFRESH_BEANS_PERIOD;
 import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_START_DELAY;
 import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_STATSD_HOST;
 import static datadog.trace.api.config.JmxFetchConfig.JMX_FETCH_STATSD_PORT;
 import static datadog.trace.api.config.JmxFetchConfig.JMX_TAGS;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_AGENTLESS;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_AGENTLESS_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_ALLOCATION_ENABLED;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_ALLOCATION_ENABLED_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_API_KEY_FILE_OLD;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_API_KEY_FILE_VERY_OLD;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_API_KEY_OLD;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_API_KEY_VERY_OLD;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_ENABLED;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_ENABLED_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_EXCEPTION_HISTOGRAM_MAX_COLLECTION_SIZE;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_EXCEPTION_HISTOGRAM_MAX_COLLECTION_SIZE_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_EXCEPTION_HISTOGRAM_TOP_ITEMS;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_EXCEPTION_HISTOGRAM_TOP_ITEMS_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_EXCEPTION_SAMPLE_LIMIT;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_EXCEPTION_SAMPLE_LIMIT_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_EXCLUDE_AGENT_THREADS;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_FORMAT_V2_4_ENABLED;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_FORMAT_V2_4_ENABLED_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_HEAP_ENABLED;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_HEAP_ENABLED_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_HOTSPOTS_ENABLED;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_LEGACY_TRACING_INTEGRATION;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_LEGACY_TRACING_INTEGRATION_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_PROXY_HOST;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_PROXY_PASSWORD;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_PROXY_PORT;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_PROXY_PORT_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_PROXY_USERNAME;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_START_DELAY;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_START_DELAY_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_START_FORCE_FIRST;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_START_FORCE_FIRST_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_TAGS;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_TEMPLATE_OVERRIDE_FILE;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_UPLOAD_COMPRESSION;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_UPLOAD_COMPRESSION_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_UPLOAD_PERIOD;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_UPLOAD_PERIOD_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_UPLOAD_SUMMARY_ON_413;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_UPLOAD_SUMMARY_ON_413_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_UPLOAD_TIMEOUT;
+import static datadog.trace.api.config.ProfilingConfig.PROFILING_UPLOAD_TIMEOUT_DEFAULT;
 import static datadog.trace.api.config.ProfilingConfig.PROFILING_URL;
-import static datadog.trace.api.config.TraceInstrumentationConfig.AWS_PROPAGATION_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.DB_CLIENT_HOST_SPLIT_BY_INSTANCE;
 import static datadog.trace.api.config.TraceInstrumentationConfig.DB_CLIENT_HOST_SPLIT_BY_INSTANCE_TYPE_SUFFIX;
 import static datadog.trace.api.config.TraceInstrumentationConfig.GRPC_IGNORED_INBOUND_METHODS;
@@ -165,28 +168,23 @@ import static datadog.trace.api.config.TraceInstrumentationConfig.IGNITE_CACHE_I
 import static datadog.trace.api.config.TraceInstrumentationConfig.INTEGRATIONS_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.JDBC_CONNECTION_CLASS_NAME;
 import static datadog.trace.api.config.TraceInstrumentationConfig.JDBC_PREPARED_STATEMENT_CLASS_NAME;
-import static datadog.trace.api.config.TraceInstrumentationConfig.JMS_LEGACY_TRACING_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.JMS_PROPAGATION_DISABLED_QUEUES;
 import static datadog.trace.api.config.TraceInstrumentationConfig.JMS_PROPAGATION_DISABLED_TOPICS;
-import static datadog.trace.api.config.TraceInstrumentationConfig.JMS_PROPAGATION_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.KAFKA_CLIENT_BASE64_DECODING_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.KAFKA_CLIENT_PROPAGATION_DISABLED_TOPICS;
-import static datadog.trace.api.config.TraceInstrumentationConfig.KAFKA_CLIENT_PROPAGATION_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.LOGS_INJECTION_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.LOGS_MDC_TAGS_INJECTION_ENABLED;
+import static datadog.trace.api.config.TraceInstrumentationConfig.MESSAGE_BROKER_SPLIT_BY_DESTINATION;
 import static datadog.trace.api.config.TraceInstrumentationConfig.OSGI_SEARCH_DEPTH;
 import static datadog.trace.api.config.TraceInstrumentationConfig.PLAY_REPORT_HTTP_STATUS;
-import static datadog.trace.api.config.TraceInstrumentationConfig.RABBIT_LEGACY_TRACING_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.RABBIT_PROPAGATION_DISABLED_EXCHANGES;
 import static datadog.trace.api.config.TraceInstrumentationConfig.RABBIT_PROPAGATION_DISABLED_QUEUES;
-import static datadog.trace.api.config.TraceInstrumentationConfig.RABBIT_PROPAGATION_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.RESOLVER_USE_LOADCLASS;
 import static datadog.trace.api.config.TraceInstrumentationConfig.RUNTIME_CONTEXT_FIELD_INJECTION;
 import static datadog.trace.api.config.TraceInstrumentationConfig.SERIALVERSIONUID_FIELD_INJECTION;
 import static datadog.trace.api.config.TraceInstrumentationConfig.SERVLET_ASYNC_TIMEOUT_ERROR;
 import static datadog.trace.api.config.TraceInstrumentationConfig.SERVLET_PRINCIPAL_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.SERVLET_ROOT_CONTEXT_SERVICE_NAME;
-import static datadog.trace.api.config.TraceInstrumentationConfig.SQS_PROPAGATION_ENABLED;
 import static datadog.trace.api.config.TraceInstrumentationConfig.TEMP_JARS_CLEAN_ON_BOOT;
 import static datadog.trace.api.config.TraceInstrumentationConfig.TRACE_ANNOTATIONS;
 import static datadog.trace.api.config.TraceInstrumentationConfig.TRACE_CLASSES_EXCLUDE;
@@ -242,10 +240,8 @@ import datadog.trace.api.config.TracerConfig;
 import datadog.trace.bootstrap.config.provider.CapturedEnvironmentConfigSource;
 import datadog.trace.bootstrap.config.provider.ConfigProvider;
 import datadog.trace.bootstrap.config.provider.SystemPropertiesConfigSource;
-import de.thetaphi.forbiddenapis.SuppressForbidden;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
@@ -262,6 +258,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -352,8 +349,10 @@ public class Config {
   private final Set<PropagationStyle> propagationStylesToExtract;
   private final Set<PropagationStyle> propagationStylesToInject;
 
-  private final boolean jmxFetchEnabled;
+  private final String dogStatsDNamedPipe;
   private final int dogStatsDStartDelay;
+
+  private final boolean jmxFetchEnabled;
   private final String jmxFetchConfigDir;
   private final List<String> jmxFetchConfigs;
   @Deprecated private final List<String> jmxFetchMetricsConfigs;
@@ -362,6 +361,8 @@ public class Config {
   private final Integer jmxFetchRefreshBeansPeriod;
   private final String jmxFetchStatsdHost;
   private final Integer jmxFetchStatsdPort;
+  private final boolean jmxFetchMultipleRuntimeServicesEnabled;
+  private final int jmxFetchMultipleRuntimeServicesLimit;
 
   // These values are default-ed to those of jmx fetch values as needed
   private final boolean healthMetricsEnabled;
@@ -421,6 +422,8 @@ public class Config {
   private final String appSecRulesFile;
   private final int appSecReportMinTimeout;
   private final int appSecReportMaxTimeout;
+  private final String appSecIpAddrHeader;
+  private final int appSecTraceRateLimit;
 
   private final boolean ciVisibilityEnabled;
 
@@ -431,15 +434,15 @@ public class Config {
   private final Set<String> kafkaClientPropagationDisabledTopics;
   private final boolean kafkaClientBase64DecodingEnabled;
 
-  private final boolean jmsLegacyTracingEnabled;
   private final boolean jmsPropagationEnabled;
   private final Set<String> jmsPropagationDisabledTopics;
   private final Set<String> jmsPropagationDisabledQueues;
 
-  private final boolean rabbitLegacyTracingEnabled;
   private final boolean rabbitPropagationEnabled;
   private final Set<String> rabbitPropagationDisabledQueues;
   private final Set<String> rabbitPropagationDisabledExchanges;
+
+  private final boolean messageBrokerSplitByDestination;
 
   private final boolean hystrixTagsEnabled;
   private final boolean hystrixMeasuredEnabled;
@@ -459,7 +462,7 @@ public class Config {
   private final boolean traceAgentV05Enabled;
 
   private final boolean debugEnabled;
-  private final String configFile;
+  private final String configFileStatus;
 
   private final IdGenerationStrategy idGenerationStrategy;
 
@@ -495,7 +498,7 @@ public class Config {
 
   private Config(final ConfigProvider configProvider) {
     this.configProvider = configProvider;
-    configFile = findConfigurationFile();
+    configFileStatus = configProvider.getConfigFileStatus();
     runtimeId =
         null != INSTANCE
             ? INSTANCE.runtimeId
@@ -714,6 +717,8 @@ public class Config {
         getPropagationStyleSetSettingFromEnvironmentOrDefault(
             PROPAGATION_STYLE_INJECT, DEFAULT_PROPAGATION_STYLE_INJECT);
 
+    dogStatsDNamedPipe = configProvider.getString(DOGSTATSD_NAMED_PIPE);
+
     dogStatsDStartDelay =
         configProvider.getInteger(
             DOGSTATSD_START_DELAY, DEFAULT_DOGSTATSD_START_DELAY, JMX_FETCH_START_DELAY);
@@ -739,6 +744,15 @@ public class Config {
             // default to agent host if an explicit port has been set
             null != jmxFetchStatsdPort && jmxFetchStatsdPort > 0 ? agentHost : null,
             DOGSTATSD_HOST);
+
+    jmxFetchMultipleRuntimeServicesEnabled =
+        configProvider.getBoolean(
+            JMX_FETCH_MULTIPLE_RUNTIME_SERVICES_ENABLED,
+            DEFAULT_JMX_FETCH_MULTIPLE_RUNTIME_SERVICES_ENABLED);
+    jmxFetchMultipleRuntimeServicesLimit =
+        configProvider.getInteger(
+            JMX_FETCH_MULTIPLE_RUNTIME_SERVICES_LIMIT,
+            DEFAULT_JMX_FETCH_MULTIPLE_RUNTIME_SERVICES_LIMIT);
 
     // Writer.Builder createMonitor will use the values of the JMX fetch & agent to fill-in defaults
     healthMetricsEnabled =
@@ -783,17 +797,17 @@ public class Config {
     traceSampleRate = configProvider.getDouble(TRACE_SAMPLE_RATE);
     traceRateLimit = configProvider.getInteger(TRACE_RATE_LIMIT, DEFAULT_TRACE_RATE_LIMIT);
 
-    profilingEnabled = configProvider.getBoolean(PROFILING_ENABLED, DEFAULT_PROFILING_ENABLED);
+    profilingEnabled = configProvider.getBoolean(PROFILING_ENABLED, PROFILING_ENABLED_DEFAULT);
     profilingAllocationEnabled =
         configProvider.getBoolean(
-            PROFILING_ALLOCATION_ENABLED, DEFAULT_PROFILING_ALLOCATION_ENABLED);
+            PROFILING_ALLOCATION_ENABLED, PROFILING_ALLOCATION_ENABLED_DEFAULT);
     profilingHeapEnabled =
-        configProvider.getBoolean(PROFILING_HEAP_ENABLED, DEFAULT_PROFILING_HEAP_ENABLED);
+        configProvider.getBoolean(PROFILING_HEAP_ENABLED, PROFILING_HEAP_ENABLED_DEFAULT);
     profilingAgentless =
-        configProvider.getBoolean(PROFILING_AGENTLESS, DEFAULT_PROFILING_AGENTLESS);
+        configProvider.getBoolean(PROFILING_AGENTLESS, PROFILING_AGENTLESS_DEFAULT);
     profilingLegacyTracingIntegrationEnabled =
         configProvider.getBoolean(
-            PROFILING_LEGACY_TRACING_INTEGRATION, DEFAULT_PROFILING_LEGACY_TRACING_INTEGRATION);
+            PROFILING_LEGACY_TRACING_INTEGRATION, PROFILING_LEGACY_TRACING_INTEGRATION_DEFAULT);
     profilingUrl = configProvider.getString(PROFILING_URL);
 
     if (tmpApiKey == null) {
@@ -829,34 +843,34 @@ public class Config {
 
     profilingTags = configProvider.getMergedMap(PROFILING_TAGS);
     profilingStartDelay =
-        configProvider.getInteger(PROFILING_START_DELAY, DEFAULT_PROFILING_START_DELAY);
+        configProvider.getInteger(PROFILING_START_DELAY, PROFILING_START_DELAY_DEFAULT);
     profilingStartForceFirst =
-        configProvider.getBoolean(PROFILING_START_FORCE_FIRST, DEFAULT_PROFILING_START_FORCE_FIRST);
+        configProvider.getBoolean(PROFILING_START_FORCE_FIRST, PROFILING_START_FORCE_FIRST_DEFAULT);
     profilingUploadPeriod =
-        configProvider.getInteger(PROFILING_UPLOAD_PERIOD, DEFAULT_PROFILING_UPLOAD_PERIOD);
+        configProvider.getInteger(PROFILING_UPLOAD_PERIOD, PROFILING_UPLOAD_PERIOD_DEFAULT);
     profilingTemplateOverrideFile = configProvider.getString(PROFILING_TEMPLATE_OVERRIDE_FILE);
     profilingUploadTimeout =
-        configProvider.getInteger(PROFILING_UPLOAD_TIMEOUT, DEFAULT_PROFILING_UPLOAD_TIMEOUT);
+        configProvider.getInteger(PROFILING_UPLOAD_TIMEOUT, PROFILING_UPLOAD_TIMEOUT_DEFAULT);
     profilingUploadCompression =
         configProvider.getString(
-            PROFILING_UPLOAD_COMPRESSION, DEFAULT_PROFILING_UPLOAD_COMPRESSION);
+            PROFILING_UPLOAD_COMPRESSION, PROFILING_UPLOAD_COMPRESSION_DEFAULT);
     profilingProxyHost = configProvider.getString(PROFILING_PROXY_HOST);
     profilingProxyPort =
-        configProvider.getInteger(PROFILING_PROXY_PORT, DEFAULT_PROFILING_PROXY_PORT);
+        configProvider.getInteger(PROFILING_PROXY_PORT, PROFILING_PROXY_PORT_DEFAULT);
     profilingProxyUsername = configProvider.getString(PROFILING_PROXY_USERNAME);
     profilingProxyPassword = configProvider.getString(PROFILING_PROXY_PASSWORD);
 
     profilingExceptionSampleLimit =
         configProvider.getInteger(
-            PROFILING_EXCEPTION_SAMPLE_LIMIT, DEFAULT_PROFILING_EXCEPTION_SAMPLE_LIMIT);
+            PROFILING_EXCEPTION_SAMPLE_LIMIT, PROFILING_EXCEPTION_SAMPLE_LIMIT_DEFAULT);
     profilingExceptionHistogramTopItems =
         configProvider.getInteger(
             PROFILING_EXCEPTION_HISTOGRAM_TOP_ITEMS,
-            DEFAULT_PROFILING_EXCEPTION_HISTOGRAM_TOP_ITEMS);
+            PROFILING_EXCEPTION_HISTOGRAM_TOP_ITEMS_DEFAULT);
     profilingExceptionHistogramMaxCollectionSize =
         configProvider.getInteger(
             PROFILING_EXCEPTION_HISTOGRAM_MAX_COLLECTION_SIZE,
-            DEFAULT_PROFILING_EXCEPTION_HISTOGRAM_MAX_COLLECTION_SIZE);
+            PROFILING_EXCEPTION_HISTOGRAM_MAX_COLLECTION_SIZE_DEFAULT);
 
     profilingExcludeAgentThreads = configProvider.getBoolean(PROFILING_EXCLUDE_AGENT_THREADS, true);
 
@@ -865,7 +879,7 @@ public class Config {
 
     profilingUploadSummaryOn413Enabled =
         configProvider.getBoolean(
-            PROFILING_UPLOAD_SUMMARY_ON_413, DEFAULT_PROFILING_UPLOAD_SUMMARY_ON_413);
+            PROFILING_UPLOAD_SUMMARY_ON_413, PROFILING_UPLOAD_SUMMARY_ON_413_DEFAULT);
 
     appSecEnabled = configProvider.getBoolean(APPSEC_ENABLED, DEFAULT_APPSEC_ENABLED);
     appSecReportingInband =
@@ -875,6 +889,14 @@ public class Config {
     // Default AppSec report timeout min=5, max=60
     appSecReportMaxTimeout = configProvider.getInteger(APPSEC_REPORT_TIMEOUT_SEC, 60);
     appSecReportMinTimeout = Math.min(appSecReportMaxTimeout, 5);
+    String appSecIpAddrHeader = configProvider.getString(APPSEC_IP_ADDR_HEADER);
+    if (appSecIpAddrHeader != null) {
+      appSecIpAddrHeader = appSecIpAddrHeader.toLowerCase(Locale.ROOT);
+    }
+    this.appSecIpAddrHeader = appSecIpAddrHeader;
+
+    appSecTraceRateLimit =
+        configProvider.getInteger(APPSEC_TRACE_RATE_LIMIT, DEFAULT_APPSEC_TRACE_RATE_LIMIT);
 
     ciVisibilityEnabled =
         configProvider.getBoolean(CIVISIBILITY_ENABLED, DEFAULT_CIVISIBILITY_ENABLED);
@@ -884,43 +906,29 @@ public class Config {
 
     jdbcConnectionClassName = configProvider.getString(JDBC_CONNECTION_CLASS_NAME, "");
 
-    awsPropagationEnabled =
-        configProvider.getBoolean(AWS_PROPAGATION_ENABLED, DEFAULT_AWS_PROPAGATION_ENABLED);
-    sqsPropagationEnabled =
-        awsPropagationEnabled
-            && configProvider.getBoolean(SQS_PROPAGATION_ENABLED, DEFAULT_SQS_PROPAGATION_ENABLED);
+    awsPropagationEnabled = isPropagationEnabled(true, "aws");
+    sqsPropagationEnabled = awsPropagationEnabled && isPropagationEnabled(true, "sqs");
 
-    kafkaClientPropagationEnabled =
-        configProvider.getBoolean(
-            KAFKA_CLIENT_PROPAGATION_ENABLED, DEFAULT_KAFKA_CLIENT_PROPAGATION_ENABLED);
-
+    kafkaClientPropagationEnabled = isPropagationEnabled(true, "kafka", "kafka.client");
     kafkaClientPropagationDisabledTopics =
         tryMakeImmutableSet(configProvider.getList(KAFKA_CLIENT_PROPAGATION_DISABLED_TOPICS));
-
     kafkaClientBase64DecodingEnabled =
         configProvider.getBoolean(KAFKA_CLIENT_BASE64_DECODING_ENABLED, false);
 
-    jmsLegacyTracingEnabled = configProvider.getBoolean(JMS_LEGACY_TRACING_ENABLED, true);
-
-    jmsPropagationEnabled =
-        configProvider.getBoolean(JMS_PROPAGATION_ENABLED, DEFAULT_JMS_PROPAGATION_ENABLED);
-
+    jmsPropagationEnabled = isPropagationEnabled(true, "jms");
     jmsPropagationDisabledTopics =
         tryMakeImmutableSet(configProvider.getList(JMS_PROPAGATION_DISABLED_TOPICS));
-
     jmsPropagationDisabledQueues =
         tryMakeImmutableSet(configProvider.getList(JMS_PROPAGATION_DISABLED_QUEUES));
 
-    rabbitLegacyTracingEnabled = configProvider.getBoolean(RABBIT_LEGACY_TRACING_ENABLED, true);
-
-    rabbitPropagationEnabled =
-        configProvider.getBoolean(RABBIT_PROPAGATION_ENABLED, DEFAULT_RABBIT_PROPAGATION_ENABLED);
-
+    rabbitPropagationEnabled = isPropagationEnabled(true, "rabbit", "rabbitmq");
     rabbitPropagationDisabledQueues =
         tryMakeImmutableSet(configProvider.getList(RABBIT_PROPAGATION_DISABLED_QUEUES));
-
     rabbitPropagationDisabledExchanges =
         tryMakeImmutableSet(configProvider.getList(RABBIT_PROPAGATION_DISABLED_EXCHANGES));
+
+    messageBrokerSplitByDestination =
+        configProvider.getBoolean(MESSAGE_BROKER_SPLIT_BY_DESTINATION, false);
 
     grpcIgnoredInboundMethods =
         tryMakeImmutableSet(configProvider.getList(GRPC_IGNORED_INBOUND_METHODS));
@@ -1174,6 +1182,10 @@ public class Config {
     return propagationStylesToInject;
   }
 
+  public String getDogStatsDNamedPipe() {
+    return dogStatsDNamedPipe;
+  }
+
   public int getDogStatsDStartDelay() {
     return dogStatsDStartDelay;
   }
@@ -1212,6 +1224,14 @@ public class Config {
 
   public Integer getJmxFetchStatsdPort() {
     return jmxFetchStatsdPort;
+  }
+
+  public boolean isJmxFetchMultipleRuntimeServicesEnabled() {
+    return jmxFetchMultipleRuntimeServicesEnabled;
+  }
+
+  public int getJmxFetchMultipleRuntimeServicesLimit() {
+    return jmxFetchMultipleRuntimeServicesLimit;
   }
 
   public boolean isHealthMetricsEnabled() {
@@ -1390,8 +1410,16 @@ public class Config {
     return appSecReportMinTimeout;
   }
 
+  public String getAppSecIpAddrHeader() {
+    return appSecIpAddrHeader;
+  }
+
   public int getAppSecReportMaxTimeout() {
     return appSecReportMaxTimeout;
+  }
+
+  public int getAppSecTraceRateLimit() {
+    return appSecTraceRateLimit;
   }
 
   public boolean isCiVisibilityEnabled() {
@@ -1418,15 +1446,11 @@ public class Config {
     return null != topic && kafkaClientPropagationDisabledTopics.contains(topic);
   }
 
-  public boolean isJmsLegacyTracingEnabled() {
-    return jmsLegacyTracingEnabled;
-  }
-
-  public boolean isJMSPropagationEnabled() {
+  public boolean isJmsPropagationEnabled() {
     return jmsPropagationEnabled;
   }
 
-  public boolean isJMSPropagationDisabledForDestination(final String queueOrTopic) {
+  public boolean isJmsPropagationDisabledForDestination(final String queueOrTopic) {
     return null != queueOrTopic
         && (jmsPropagationDisabledQueues.contains(queueOrTopic)
             || jmsPropagationDisabledTopics.contains(queueOrTopic));
@@ -1434,10 +1458,6 @@ public class Config {
 
   public boolean isKafkaClientBase64DecodingEnabled() {
     return kafkaClientBase64DecodingEnabled;
-  }
-
-  public boolean isRabbitLegacyTracingEnabled() {
-    return rabbitLegacyTracingEnabled;
   }
 
   public boolean isRabbitPropagationEnabled() {
@@ -1448,6 +1468,10 @@ public class Config {
     return null != queueOrExchange
         && (rabbitPropagationDisabledQueues.contains(queueOrExchange)
             || rabbitPropagationDisabledExchanges.contains(queueOrExchange));
+  }
+
+  public boolean isMessageBrokerSplitByDestination() {
+    return messageBrokerSplitByDestination;
   }
 
   public boolean isHystrixTagsEnabled() {
@@ -1518,8 +1542,8 @@ public class Config {
     return dogStatsDArgs;
   }
 
-  public String getConfigFile() {
-    return configFile;
+  public String getConfigFileStatus() {
+    return configFileStatus;
   }
 
   public IdGenerationStrategy getIdGenerationStrategy() {
@@ -1784,6 +1808,10 @@ public class Config {
       return profilingUrl;
     } else if (profilingAgentless) {
       // when agentless profiling is turned on we send directly to our intake
+      if (configProvider.getBoolean(
+          PROFILING_FORMAT_V2_4_ENABLED, PROFILING_FORMAT_V2_4_ENABLED_DEFAULT)) {
+        return "https://intake.profile." + site + "/api/v2/profile";
+      }
       return "https://intake.profile." + site + "/v1/input";
     } else {
       // when profilingUrl and agentless are not set we send to the dd trace agent running locally
@@ -1835,6 +1863,17 @@ public class Config {
     return isEnabled(Arrays.asList(integrationNames), "", ".e2e.duration.enabled", defaultEnabled);
   }
 
+  public boolean isPropagationEnabled(
+      final boolean defaultEnabled, final String... integrationNames) {
+    return isEnabled(Arrays.asList(integrationNames), "", ".propagation.enabled", defaultEnabled);
+  }
+
+  public boolean isLegacyTracingEnabled(
+      final boolean defaultEnabled, final String... integrationNames) {
+    return isEnabled(
+        Arrays.asList(integrationNames), "", ".legacy.tracing.enabled", defaultEnabled);
+  }
+
   public boolean isTraceAnalyticsIntegrationEnabled(
       final SortedSet<String> integrationNames, final boolean defaultEnabled) {
     return isEnabled(integrationNames, "", ".analytics.enabled", defaultEnabled);
@@ -1847,6 +1886,14 @@ public class Config {
 
   public boolean isSamplingMechanismValidationDisabled() {
     return configProvider.getBoolean(TracerConfig.SAMPLING_MECHANISM_VALIDATION_DISABLED, false);
+  }
+
+  public boolean isDatadogTagPropagationEnabled() {
+    return configProvider.getBoolean(TracerConfig.DATADOG_TAGS_ENABLED, false);
+  }
+
+  public int getDatadogTagsLimit() {
+    return configProvider.getInteger(TracerConfig.DATADOG_TAGS_LIMIT, 512);
   }
 
   public <T extends Enum<T>> T getEnumValue(
@@ -1995,31 +2042,6 @@ public class Config {
       }
     }
     return Collections.unmodifiableSet(result);
-  }
-
-  @SuppressForbidden
-  private static String findConfigurationFile() {
-    String configurationFilePath =
-        System.getProperty(propertyNameToSystemPropertyName(CONFIGURATION_FILE));
-    if (null == configurationFilePath) {
-      configurationFilePath =
-          System.getenv(propertyNameToEnvironmentVariableName(CONFIGURATION_FILE));
-    }
-    if (null != configurationFilePath && !configurationFilePath.isEmpty()) {
-      int homeIndex = configurationFilePath.indexOf('~');
-      if (homeIndex != -1) {
-
-        configurationFilePath =
-            configurationFilePath.substring(0, homeIndex)
-                + System.getProperty("user.home")
-                + configurationFilePath.substring(homeIndex + 1);
-      }
-      final File configurationFile = new File(configurationFilePath);
-      if (!configurationFile.exists()) {
-        return configurationFilePath;
-      }
-    }
-    return "no config file present";
   }
 
   /** Returns the detected hostname. First tries locally, then using DNS */
@@ -2321,22 +2343,20 @@ public class Config {
         + kafkaClientPropagationDisabledTopics
         + ", kafkaClientBase64DecodingEnabled="
         + kafkaClientBase64DecodingEnabled
-        + ", jmsLegacyTracingEnabled="
-        + jmsLegacyTracingEnabled
         + ", jmsPropagationEnabled="
         + jmsPropagationEnabled
         + ", jmsPropagationDisabledTopics="
         + jmsPropagationDisabledTopics
         + ", jmsPropagationDisabledQueues="
         + jmsPropagationDisabledQueues
-        + ", rabbitLegacyTracingEnabled="
-        + rabbitLegacyTracingEnabled
         + ", rabbitPropagationEnabled="
         + rabbitPropagationEnabled
         + ", rabbitPropagationDisabledQueues="
         + rabbitPropagationDisabledQueues
         + ", rabbitPropagationDisabledExchanges="
         + rabbitPropagationDisabledExchanges
+        + ", messageBrokerSplitByDestination="
+        + messageBrokerSplitByDestination
         + ", hystrixTagsEnabled="
         + hystrixTagsEnabled
         + ", hystrixMeasuredEnabled="
@@ -2356,7 +2376,7 @@ public class Config {
         + ", debugEnabled="
         + debugEnabled
         + ", configFile='"
-        + configFile
+        + configFileStatus
         + '\''
         + ", idGenerationStrategy="
         + idGenerationStrategy

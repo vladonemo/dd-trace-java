@@ -9,7 +9,6 @@ import com.datadog.appsec.event.data.StringKVPair
 import com.datadog.appsec.report.AppSecEventWrapper
 import com.datadog.appsec.report.raw.events.AppSecEvent100
 import datadog.trace.api.Function
-import datadog.trace.api.function.BiConsumer
 import datadog.trace.api.TraceSegment
 import datadog.trace.api.function.BiFunction
 import datadog.trace.api.function.Supplier
@@ -20,6 +19,7 @@ import datadog.trace.api.gateway.IGSpanInfo
 import datadog.trace.api.gateway.RequestContext
 import datadog.trace.api.gateway.SubscriptionService
 import datadog.trace.api.http.StoredBodySupplier
+import datadog.trace.api.time.TimeSource
 import datadog.trace.bootstrap.instrumentation.api.AgentSpan
 import datadog.trace.bootstrap.instrumentation.api.URIDataAdapter
 import datadog.trace.bootstrap.instrumentation.api.URIDataAdapterBase
@@ -49,7 +49,8 @@ class GatewayBridgeSpecification extends DDSpecification {
     i
   }()
 
-  GatewayBridge bridge = new GatewayBridge(ig, eventDispatcher)
+  RateLimiter rateLimiter = new RateLimiter(10, { -> 0L } as TimeSource, RateLimiter.ThrottledCallback.NOOP)
+  GatewayBridge bridge = new GatewayBridge(ig, eventDispatcher, rateLimiter, null)
 
   Supplier<Flow<AppSecRequestContext>> requestStartedCB
   BiFunction<RequestContext, AgentSpan, Flow<Void>> requestEndedCB
@@ -59,7 +60,7 @@ class GatewayBridgeSpecification extends DDSpecification {
   TriFunction<RequestContext, String, Integer, Flow<Void>> requestSocketAddressCB
   BiFunction<RequestContext, StoredBodySupplier, Void> requestBodyStartCB
   BiFunction<RequestContext, StoredBodySupplier, Flow<Void>> requestBodyDoneCB
-  BiConsumer<RequestContext, Integer> responseStartedCB
+  BiFunction<RequestContext, Integer, Flow<Void>> responseStartedCB
 
   void setup() {
     callInitAndCaptureCBs()
@@ -91,6 +92,7 @@ class GatewayBridgeSpecification extends DDSpecification {
 
     then:
     1 * mockAppSecCtx.transferCollectedEvents() >> [event]
+    1 * mockAppSecCtx.peerAddress >> '2001::1'
     1 * mockAppSecCtx.close()
     1 * traceSegment.setTagTop('manual.keep', true)
     1 * traceSegment.setTagTop("_dd.appsec.enabled", 1)
@@ -98,9 +100,50 @@ class GatewayBridgeSpecification extends DDSpecification {
     1 * traceSegment.setTagTop('appsec.event', true)
     1 * traceSegment.setDataTop('appsec', new AppSecEventWrapper([event]))
     1 * traceSegment.setTagTop('http.request.headers.accept', 'header_value')
+    1 * traceSegment.setTagTop('network.client.ip', '2001::1')
+    0 * traceSegment._(*_)
     1 * eventDispatcher.publishEvent(mockAppSecCtx, EventType.REQUEST_END)
     flow.result == null
     flow.action == Flow.Action.Noop.INSTANCE
+  }
+
+  void 'event publishing is rate limited'() {
+    AppSecEvent100 event = Mock()
+    AppSecRequestContext mockAppSecCtx = Mock(AppSecRequestContext)
+    mockAppSecCtx.requestHeaders >> [:]
+    RequestContext mockCtx = Mock(RequestContext) {
+      getData() >> mockAppSecCtx
+      getTraceSegment() >> traceSegment
+    }
+    IGSpanInfo spanInfo = Mock()
+
+    when:
+    11.times {requestEndedCB.apply(mockCtx, spanInfo) }
+
+    then:
+    11 * mockAppSecCtx.transferCollectedEvents() >> [event]
+    11 * mockAppSecCtx.close()
+    11 * eventDispatcher.publishEvent(mockAppSecCtx, EventType.REQUEST_END)
+    10 * traceSegment.setDataTop("appsec", _)
+  }
+
+  void 'actor ip calculated from headers'() {
+    AppSecRequestContext mockAppSecCtx = Mock(AppSecRequestContext)
+    mockAppSecCtx.requestHeaders >> [
+      'x-real-ip': ['10.0.0.1'],
+      forwarded: ['for=127.0.0.1', 'for="[::1]", for=8.8.8.8'],
+    ]
+    RequestContext mockCtx = Mock(RequestContext) {
+      getData() >> mockAppSecCtx
+      getTraceSegment() >> traceSegment
+    }
+
+    when:
+    requestEndedCB.apply(mockCtx, Mock(IGSpanInfo))
+
+    then:
+    1 * mockAppSecCtx.transferCollectedEvents() >> [Mock(AppSecEvent100)]
+    1 * traceSegment.setTagTop('actor.ip', '8.8.8.8')
   }
 
   void 'bridge can collect headers'() {
@@ -439,5 +482,18 @@ class GatewayBridgeSpecification extends DDSpecification {
 
     then:
     bundle.get(KnownAddresses.REQUEST_SCHEME) == 'https'
+  }
+
+  void 'response_start produces appsec context and publishes event'() {
+    eventDispatcher.getDataSubscribers({ KnownAddresses.RESPONSE_STATUS in it }) >> nonEmptyDsInfo
+
+    when:
+    Flow<AppSecRequestContext> flow = responseStartedCB.apply(ctx, 404)
+
+    then:
+    1 * eventDispatcher.publishDataEvent(nonEmptyDsInfo, ctx.data, _ as DataBundle, false) >>
+    { NoopFlow.INSTANCE }
+    flow.result == null
+    flow.action == Flow.Action.Noop.INSTANCE
   }
 }

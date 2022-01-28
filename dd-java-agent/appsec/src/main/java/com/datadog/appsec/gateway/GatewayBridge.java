@@ -20,6 +20,7 @@ import datadog.trace.api.gateway.SubscriptionService;
 import datadog.trace.api.http.StoredBodySupplier;
 import datadog.trace.bootstrap.instrumentation.api.URIDataAdapter;
 import datadog.trace.util.Strings;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -49,15 +50,23 @@ public class GatewayBridge {
 
   private final SubscriptionService subscriptionService;
   private final EventProducerService producerService;
+  private final String ipAddrHeader;
+  private final RateLimiter rateLimiter;
 
   // subscriber cache
   private volatile EventProducerService.DataSubscriberInfo initialReqDataSubInfo;
   private volatile EventProducerService.DataSubscriberInfo rawRequestBodySubInfo;
+  private volatile EventProducerService.DataSubscriberInfo responseStatusSubInfo;
 
   public GatewayBridge(
-      SubscriptionService subscriptionService, EventProducerService producerService) {
+      SubscriptionService subscriptionService,
+      EventProducerService producerService,
+      RateLimiter rateLimiter,
+      String appSecIpAddrHeader) {
     this.subscriptionService = subscriptionService;
     this.producerService = producerService;
+    this.rateLimiter = rateLimiter;
+    this.ipAddrHeader = appSecIpAddrHeader;
   }
 
   public void init() {
@@ -91,28 +100,34 @@ public class GatewayBridge {
 
             Collection<AppSecEvent100> collectedEvents = ctx.transferCollectedEvents();
             // If detected any events - mark span at appsec.event
-            if (!collectedEvents.isEmpty()) {
+            if (!collectedEvents.isEmpty() && (rateLimiter == null || !rateLimiter.isThrottled())) {
               // Keep event related span, because it could be ignored in case of
               // reduced datadog sampling rate.
               traceSeg.setTagTop(DDTags.MANUAL_KEEP, true);
               traceSeg.setTagTop("appsec.event", true);
               traceSeg.setTagTop("network.client.ip", ctx.getPeerAddress());
 
+              Map<String, List<String>> requestHeaders = ctx.getRequestHeaders();
+              InetAddress inferredAddr =
+                  ClientIpAddressResolver.doResolve(this.ipAddrHeader, requestHeaders);
+              if (inferredAddr != null) {
+                traceSeg.setTagTop("actor.ip", inferredAddr.getHostAddress());
+              }
+
               // Report AppSec events via "_dd.appsec.json" tag
               AppSecEventWrapper wrapper = new AppSecEventWrapper(collectedEvents);
               traceSeg.setDataTop("appsec", wrapper);
 
               // Report collected request headers based on allow list
-              ctx.getRequestHeaders()
-                  .forEach(
-                      (name, value) -> {
-                        if (AppSecRequestContext.HEADERS_ALLOW_LIST.contains(name)) {
-                          String v = Strings.join(",", value);
-                          if (!v.isEmpty()) {
-                            traceSeg.setTagTop("http.request.headers." + name, v);
-                          }
-                        }
-                      });
+              requestHeaders.forEach(
+                  (name, value) -> {
+                    if (AppSecRequestContext.HEADERS_ALLOW_LIST.contains(name)) {
+                      String v = Strings.join(",", value);
+                      if (!v.isEmpty()) {
+                        traceSeg.setTagTop("http.request.headers." + name, v);
+                      }
+                    }
+                  });
             }
           }
 
@@ -181,9 +196,15 @@ public class GatewayBridge {
           ctx.setResponseStatus(status);
 
           MapDataBundle bundle =
-              MapDataBundle.of(KnownAddresses.RESPONSE_STATUS, ctx.getResponseStatus());
+              MapDataBundle.of(
+                  KnownAddresses.RESPONSE_STATUS, String.valueOf(ctx.getResponseStatus()));
 
-          ctx.addAll(bundle);
+          if (responseStatusSubInfo == null) {
+            responseStatusSubInfo =
+                producerService.getDataSubscribers(KnownAddresses.RESPONSE_STATUS);
+          }
+
+          return producerService.publishDataEvent(responseStatusSubInfo, ctx, bundle, false);
         });
   }
 
@@ -332,11 +353,7 @@ public class GatewayBridge {
       String[] kv = QUERY_PARAM_VALUE_SPLITTER.split(keyValue, 2);
       String value = kv.length > 1 ? urlDecode(kv[1], uriEncoding, true) : "";
       String key = urlDecode(kv[0], uriEncoding, true);
-      List<String> strings = result.get(key);
-      if (strings == null) {
-        strings = new ArrayList<>(1);
-        result.put(key, strings);
-      }
+      List<String> strings = result.computeIfAbsent(key, k -> new ArrayList<>(1));
       strings.add(value);
     }
 
