@@ -50,7 +50,7 @@ class InstrumentPlugin implements Plugin<Project> {
 
           compileTask.destinationDir = rawClassesDir.asFile
 
-          byteBuddyTask.classPath.from((toolingProject?.configurations?.instrumentationMuzzle ?: []) +
+          byteBuddyTask.classPath.from((project.configurations.findByName('instrumentationMuzzle') ?: []) +
               project.configurations.compileClasspath + compileTask.destinationDir)
 
           byteBuddyTask.transformation {
